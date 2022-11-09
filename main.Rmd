@@ -1,0 +1,22 @@
+---
+title: "Pitching vs Hitting Relative Importance"
+author: "Alex Jackson, Grady Purcell, Lacas Sirovich, Ben Koch"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r include = FALSE}
+library(tidyverse)
+library(baseballr)
+```
+
+
+https://www.rdocumentation.org/packages/baseballr/versions/0.8.6
+^ has all the information on different functions to get data. There are simple functions to scrape from bref, fan graphs and savant.
+There's infromation we can grab on batters and pitchers.
+Example below on how to use one of them.
+```{r}
+fg_pitch_leaders(x=2022, y=2022)
+```
+
+
