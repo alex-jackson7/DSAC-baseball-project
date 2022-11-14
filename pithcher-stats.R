@@ -7,25 +7,24 @@ library(robotstxt)
 
 # check that we can scrape data from the chronicle -----------------------------
 
-paths_allowed("https://www.fangraphs.com/teams/astros/stats")
+paths_allowed("https://www.fangraphs.com/teams/astros")
 
 # read page --------------------------------------------------------------------
 
-page <- read_html("https://www.fangraphs.com/teams/astros/stats")
+page <- read_html("https://www.fangraphs.com/teams/astros")
 
 # parse components -------------------------------------------------------------
 
-pitcher <- page |>
-  html_elements(".frozen") |>
-  html_text()
+pitcher_name <- page |>
+    html_elements(".team-stats-table:nth-child(8) tbody .frozen") |>
+    html_text()
 
-authors_dates <- page |>
-  html_elements(".dateline.has-photo") |>
-  html_text2() |>
-  str_remove("By")
+age <- page |>
+  html_elements(".team-stats-table:nth-child(8) tbody .frozen+ td") |>
+  html_text() 
 
-abstracts <- page |>
-  html_elements(".has-photo.d-md-block") |>
+innings_pitched <- page |>
+  html_elements(".team-stats-table:nth-child(8) tbody td:nth-child(5)") |>
   html_text2()
 
 article_types <- page |>
@@ -43,8 +42,8 @@ urls <- page |>
 # create a data frame ----------------------------------------------------------
 
 astros_pitchers <- tibble(
-  title = pitcher),
-  author_date = authors_dates,
+  name = pitcher,
+  age = age),
   abstract = abstracts,
   article_type = article_types,
   column = columns,

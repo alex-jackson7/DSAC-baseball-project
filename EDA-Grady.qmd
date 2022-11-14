@@ -1,9 +1,70 @@
 ```{r}
-team_results_bref(Tm = "Houston Astros", year = 2022) |> 
-  select(Gm, Result, Win, Loss) |>
-  pitcher_game_logs_fg(playerid = )
+astros_2022 <- team_results_bref(Tm = "Houston Astros", year = 2022) 
 
 https://www.fangraphs.com/teams/astros/stats
 
+#| label: number-of-wins-by-pitcher
+astros_2022 |>
+  filter(Result == c("W", "W-wo")) |>
+  select(Win) |>
+  group_by(Win) |>
+  count(Win) |>
+  ggplot(
+    aes(x = Win, y = n)
+  ) +
+  geom_point() +
+  labs(x = "Pitcher",
+       y = "Number of Wins")
+
+#| label: number-of-losses-by-pitcher
+astros_2022 |>
+  filter(Result == c("L", "L-wo")) |>
+  select(Loss) |>
+  group_by(Loss) |>
+  count(Loss) |>
+  ggplot(
+    aes(x = Loss, y = n)
+  ) +
+  geom_point() +
+  labs(x = "Pitcher",
+       y = "Number of Losses")
+
+#| label: creating-list-of-pitchers
+astros_pitchers_wins <-
+  tibble(
+    pitcher = c("Abreu", "Brown", "Garcia", "Javier", "McCullers", "Montero", "Neris",
+                "Odorizzi", "Pressly", "Stanek", "Urquidy", "Valdez", "Verlander")
+  )
+
+
+```
+```{r}
+#| label: results-by-pitcher
+
+astros_2022 |>
+  full_join(astros_2022, astros_pitchers, by = Win)
+  ggplot(
+    aes(x = Win, y = Loss, color = Result)
+  ) + 
+  geom_point() + 
+  facet_wrap(~Result) 
+
+```
+```{r}
+#scraping data for pitcher time logs
+
+astros_pitchers <-
+  daily_pitcher_bref("2022-04-07", "2022-10-05") |>
+  filter(Team == "Houston")
+```
+
+From the plots above which count the number of wins per pitcher, I selected the top 3 pitchers with wins.
+```{r}
+
+top_4 <-
+  astros_pitchers |>
+  filter(Name == c("Justin Verlander" ,"Framber Valdez", "Jose Urquidy", "Luis Garcia")) 
+
+#need to figure out why this is only selecting 2 of the players
 ```
 
