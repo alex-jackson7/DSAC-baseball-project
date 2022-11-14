@@ -1,0 +1,9 @@
+```{r}
+team_results_bref(Tm = "Houston Astros", year = 2022) |> 
+  select(Gm, Result, Win, Loss) |>
+  pitcher_game_logs_fg(playerid = )
+
+https://www.fangraphs.com/teams/astros/stats
+
+```
+
