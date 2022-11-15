@@ -1,7 +1,12 @@
 ```{r}
 astros_2022 <- team_results_bref(Tm = "Houston Astros", year = 2022) 
+#this data doesn't include the postseason I don't think
 
-https://www.fangraphs.com/teams/astros/stats
+#https://www.fangraphs.com/teams/astros/stats - I was thinking that we could try to scrape
+#the data from here which is the starting pitcher stats for the Astros and then create plots
+#using these statistics plotted against results for each pitcher to determine which stats seem
+#to be better predictors of winning. I wasn't able to scrape in the data but I do think that it 
+#can be done. 
 
 #| label: number-of-wins-by-pitcher
 astros_2022 |>
@@ -38,16 +43,6 @@ astros_pitchers_wins <-
 
 
 ```
-```{r}
-#| label: results-by-pitcher
-
-astros_2022 |>
-  full_join(astros_2022, astros_pitchers, by = Win)
-  ggplot(
-    aes(x = Win, y = Loss, color = Result)
-  ) + 
-  geom_point() + 
-  facet_wrap(~Result) 
 
 ```
 ```{r}
@@ -58,13 +53,68 @@ astros_pitchers <-
   filter(Team == "Houston")
 ```
 
-From the plots above which count the number of wins per pitcher, I selected the top 3 pitchers with wins.
+From the plots above which count the number of wins and losses per pitcher, I selected the top 4 pitchers based on their number of wins and the bottom 3 based on their number of losses.
 ```{r}
+#| label: creating-a-starter-dataset
+astros_starters <-
+astros_pitchers |>
+filter(GS != 0)
 
+astros_relievers <-
+astros_pitchers |>
+filter(GS == 0)
+
+#| label: most losses as a starter vs most wins as a starter
+
+astros_starters |>
+arrange(desc(W))
+
+astros_relievers |>
+arrange(desc(W))
+```
+Pulling out the pitchers with the most wins, we see that Justin Verlander has the most wins for starters and Hector Neris has the most wins for relievers. 
+
+Let's compare some of their stats to those of the other pitchers.
+```{r}
+#I want to get the code to relevel the legend on the graph so that it is ordered in the levels of decreasing win numbers
+#I was also thinking about changing the size of the points based on the number of wins but I haven't figured out how to do that yet
+astros_starters |>
+arrange(desc(W)) |>
+reorder(Name, arrange(desc), W) 
+
+
+#this plot works 
+ggplot(astros_starters,
+  aes(x = ERA, y = Str, color = Name)) +
+  geom_point() 
+  
+
+
+```
+
+
+
+
+
+
+```
+#Below: I was doing this earlier but I don't think we need this because with the starting and reliever datasets 
+
+Then, we could do more specific analysis looking at the stats from the pitchers in the top_4
+and bottom_3 to find whether a stat can be a good predictor of wins or losses. 
+```{r}
+#| label: top-4-pitchers
 top_4 <-
   astros_pitchers |>
-  filter(Name == c("Justin Verlander" ,"Framber Valdez", "Jose Urquidy", "Luis Garcia")) 
+  slice_head(n = 4)
 
-#need to figure out why this is only selecting 2 of the players
+#| label: bottom-4-pitchers
+bottom_3 <-
+  astros_specific |>
+  filter(Name == c("Cristian Javier", "Jose Urquidy", "Luis Garcia"))
+#not working for some reason
+
+
 ```
+
 
