@@ -1,6 +1,9 @@
 ```{r}
-astros_2022 <- team_results_bref(Tm = "Houston Astros", year = 2022) 
-#this data doesn't include the postseason I don't think
+library(baseballr)
+library(tidyverse)
+library(tidymodels)
+
+astros_2022 <- team_results_bref(Tm = "Houston Astros", year = 2022) #this data doesn't include the postseason 
 
 #https://www.fangraphs.com/teams/astros/stats - I was thinking that we could try to scrape
 #the data from here which is the starting pitcher stats for the Astros and then create plots
@@ -14,12 +17,8 @@ astros_2022 |>
   select(Win) |>
   group_by(Win) |>
   count(Win) |>
-  ggplot(
-    aes(x = Win, y = n)
-  ) +
-  geom_point() +
-  labs(x = "Pitcher",
-       y = "Number of Wins")
+  arrange(desc(n))
+  
 
 #| label: number-of-losses-by-pitcher
 astros_2022 |>
@@ -27,12 +26,8 @@ astros_2022 |>
   select(Loss) |>
   group_by(Loss) |>
   count(Loss) |>
-  ggplot(
-    aes(x = Loss, y = n)
-  ) +
-  geom_point() +
-  labs(x = "Pitcher",
-       y = "Number of Losses")
+  arrange(desc(n))
+ 
 
 #| label: creating-list-of-pitchers
 astros_pitchers_wins <-
@@ -67,52 +62,152 @@ filter(GS == 0)
 #| label: most losses as a starter vs most wins as a starter
 
 astros_starters |>
+select(Name, W) |>
 arrange(desc(W))
 
 astros_relievers |>
+select(Name, W) |>
 arrange(desc(W))
 ```
 Pulling out the pitchers with the most wins, we see that Justin Verlander has the most wins for starters and Hector Neris has the most wins for relievers. 
 
 Let's compare some of their stats to those of the other pitchers.
 ```{r}
-#I want to get the code to relevel the legend on the graph so that it is ordered in the levels of decreasing win numbers
-#I was also thinking about changing the size of the points based on the number of wins but I haven't figured out how to do that yet
-astros_starters |>
-arrange(desc(W)) |>
-reorder(Name, arrange(desc), W) 
-
-
-#this plot works 
+#this is creating smaller plots to just look at trends for astros' starters
+#we can obviously create more looking at relievers and different relationships
 ggplot(astros_starters,
-  aes(x = ERA, y = Str, color = Name)) +
+  aes(x = ERA, y = Str, color = W)) +
   geom_point() 
+  
+ggplot(astros_starters,
+  aes(x = W, y = StL, color = Name)) +
+  geom_point() 
+  
+ggplot(astros_starters,
+  aes(x = W, y = SO_perc, color = Name)) +
+  geom_point() 
+  
+
   
 
 
 ```
+```{r}
+#I think it is better to use the entire dataset so we can gather whether different statistics are better predictors
 
+pitchers_2022 <-
+fg_pitch_leaders(x=2022, y=2022)
 
+#mutate a column for the winning percentage based on games played
+pitchers_2022 <-
+pitchers_2022 |>
+mutate(winning_perc = W/G) |>
+mutate(K = Strikes/Pitches)
 
+#calculating mean ERA
+mean_ERA <-
+pitchers_2022 |>
+select(ERA) |>
+summarize(mean = mean(ERA))
+
+#plotting ERA vs win percentage
+ggplot(pitchers_2022,
+aes(x = winning_perc, y = ERA)) + 
+geom_point() +
+geom_hline(yintercept = 3.34, color = "red") +
+geom_vline(xintercept = 0.5, color = "blue")
+```
+From the plot above we can then zero in on the points that lie in the bottom right quadrant
+because these pitches are performing above average in regards to ERA and win_percentage.
+To see those who are underperforming we can look at the top left quadrant. 
+
+```{r}
+above_era_winpc <-
+pitchers_2022 |>
+filter(winning_perc > 0.5 & ERA < 3.34)
+
+below_era_winpc <-
+pitchers_2022 |>
+filter(winning_perc <= 0.5 & ERA >= 3.34)
+```
+After these datasets have been created, we can now look more closely into other statistics that impact 
+winning_percentage and ERA. 
+```{r}
+above_mean_SO <-
+above_era_winpc |>
+summarize(mean_SO = mean(SO))
+
+below_mean_SO <-
+below_era_winpc |>
+summarize(mean_SO = mean(SO))
+```
+From here we can look at other means and correlations that might be statistically significant.
+```{r}
+#creating a line of best fit for the winning_perc vs ERA graph
+ggplot(pitchers_2022,
+aes(x = winning_perc, y = ERA)) + 
+geom_point() +
+geom_hline(yintercept = 3.34, color = "red") +
+geom_vline(xintercept = 0.5, color = "blue") + 
+geom_smooth(method = lm, se = FALSE)
+
+#loading in tidy models
+library(tidymodels)
+
+#looking at the R-squared of the linear model
+win_ERA_model <-
+linear_reg() |>
+set_engine("lm") |>
+fit(winning_perc ~ ERA, data = pitchers_2022)
+
+tidy(win_ERA_model)
+
+glance(win_ERA_model)$r.squared
+```
+Since the r squared value is not very large, it doesn't seem as though ERA is a great predictor of winning_percentage.
+We can look at other statistics such as WHIP. 
+```{r}
+#creating a line of best fit for the winning_perc vs WHIP graph
+ggplot(pitchers_2022,
+aes(y = winning_perc, x = WHIP)) + 
+geom_point() +
+geom_smooth(method = lm, se = FALSE)
+
+#looking at the R-squared of the linear model
+win_WHIP_model <-
+linear_reg() |>
+set_engine("lm") |>
+fit(winning_perc ~ WHIP, data = pitchers_2022)
+
+tidy(win_WHIP_model)
+
+glance(win_WHIP_model)$r.squared
+```
+Looking at this model it appears as though WHIP is an even poorer measure of winning_percentage.
+I am going to look at the relation between WHIP and ERA just for fun. 
+```{r}
+#creating a line of best fit for the ERA vs WHIP graph
+ggplot(pitchers_2022,
+aes(y = ERA, x = WHIP)) + 
+geom_point() +
+geom_smooth(method = lm, se = FALSE)
+
+#looking at the R-squared of the linear model
+ERA_WHIP_model <-
+linear_reg() |>
+set_engine("lm") |>
+fit(ERA ~ WHIP, data = pitchers_2022)
+
+tidy(ERA_WHIP_model)
+
+glance(ERA_WHIP_model)$r.squared
+```
+It is interesting because the R squared value is much large for this. And the line seems to fit the data better. 
 
 
 
 ```
-#Below: I was doing this earlier but I don't think we need this because with the starting and reliever datasets 
 
-Then, we could do more specific analysis looking at the stats from the pitchers in the top_4
-and bottom_3 to find whether a stat can be a good predictor of wins or losses. 
-```{r}
-#| label: top-4-pitchers
-top_4 <-
-  astros_pitchers |>
-  slice_head(n = 4)
-
-#| label: bottom-4-pitchers
-bottom_3 <-
-  astros_specific |>
-  filter(Name == c("Cristian Javier", "Jose Urquidy", "Luis Garcia"))
-#not working for some reason
 
 
 ```
